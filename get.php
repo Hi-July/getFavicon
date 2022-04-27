@@ -25,7 +25,7 @@ $favicon = new \Jerrybendy\Favicon\Favicon;
 /* ------ 参数设置 ------ */
 
 $defaultIco='favicon.png';   //默认图标路径
-$expire = 43200;           //缓存有效期30天, 单位为:秒，为0时不缓存
+$expire = 1;           //缓存有效期30天, 单位为:秒，为0时不缓存
 
 /* ------ 参数设置 ------ */
 /**
@@ -36,7 +36,9 @@ $favicon->setDefaultIcon($defaultIco);
 /**
  * 检测URL参数
  */
-$url = $_GET['url'];
+
+$url = empty($_GET["url"]) ? '' : $_GET["url"];
+$type = empty($_GET["type"]) ? '' : $_GET["type"];
 
 /*
  * 格式化 URL, 并尝试读取缓存
@@ -44,29 +46,46 @@ $url = $_GET['url'];
 $formatUrl = $favicon->formatUrl($url);
 
 if($expire == 0){
-    $favicon->getFavicon($formatUrl, false);
+    $favicon->getFavicon($formatUrl, true);
     exit;
-}
-else{
+}else{
+	
     $defaultMD5 = md5(file_get_contents($defaultIco));
-    
     $data = Cache::get($formatUrl,$defaultMD5,$expire);
+	
     if ($data !== NULL) {
-		
-
-		
         // foreach ($favicon->getHeader() as $header) {
         //     @header($header);
         // }
         // echo $data;
 		// echo $content;
+	if($type==1){
+		 //fopen以二进制方式打开
+		 
+		$context = stream_context_create(
+			 [
+				 'ssl' => [
+					 'verify_peer' => false,
+				 ]
+			 ]);
+		$handle=fopen($url,"rb", null, $context);
+		//变量初始化
+		//循环读取数据
+		$lines_string="";
+		do{
+		    $data=fread($handle,1024);
+		    if(strlen($data)==0) {
+		        break;
+		    }
+		$lines_string.=$data;
+		}while(true);
+		//关闭fopen句柄，释放资源
+		fclose($handle);
 		
-		
-		$article =file_get_contents($url) ;
+		$htlmText = mb_convert_encoding($lines_string,"utf-8", "auto");
 		//正则提取，匹配次数
-		$match_nums =preg_match_all('/<title>([\S\s]*?)<\/title>/',$article, $matchs);
+		$match_nums = preg_match_all('/<title>([\S\s]*?)<\/title>/',$htlmText, $matchs);
 		//匹配项是一个二维数组
-		//echo print_r($matchs);
 		//返回完整匹配次数（可能是0），或者如果发生错误返回FALSE。
 		if($match_nums == 0 || $match_nums == FALSE ){
 			//没有匹配就原样返回
@@ -74,21 +93,17 @@ else{
 		}
 		//第一个是完整匹配，第二个匹配就是去掉title标签的纯文本
 		$rows['title'] =  $matchs[1][0];
+	}
 		$rows['list'] = 'data:' . 'image/png' . ';base64,' . chunk_split(base64_encode($data));
 		// echo $content;
 		$rows['code'] = 200;
 		exit(json_encode($rows));
 		exit();
-		
-		
     }
 
     /**
      * 缓存中没有指定的内容时, 重新获取内容并缓存起来
      */
-
-	
-	
     $content = $favicon->getFavicon($formatUrl, TRUE);
 
     if( md5($content) == $defaultMD5 ){
@@ -103,21 +118,40 @@ else{
     // echo $content;
 	// exit();
 	
-	
-	$article =file_get_contents($url) ;
-	//正则提取，匹配次数
-	$match_nums =preg_match_all('/<title>([\S\s]*?)<\/title>/',$article, $matchs);
-	//匹配项是一个二维数组
-	//echo print_r($matchs);
-	//返回完整匹配次数（可能是0），或者如果发生错误返回FALSE。
-	if($match_nums == 0 || $match_nums == FALSE ){
-		//没有匹配就原样返回
-		return array();
+	if($type==1){
+		 //fopen以二进制方式打开
+		$context = stream_context_create(
+			 [
+				 'ssl' => [
+					 'verify_peer' => false,
+				 ]
+			 ]);
+		$handle=fopen($url,"rb", null, $context);
+		//变量初始化
+		//循环读取数据
+		$lines_string="";
+		do{
+		    $data=fread($handle,1024);
+		    if(strlen($data)==0) {
+		        break;
+		    }
+		$lines_string.=$data;
+		}while(true);
+		//关闭fopen句柄，释放资源
+		fclose($handle);
+		$htlmText = mb_convert_encoding($lines_string,"utf-8", "auto");
+		//正则提取，匹配次数
+		$match_nums = preg_match_all('/<title>([\S\s]*?)<\/title>/',$htlmText, $matchs);
+		//匹配项是一个二维数组
+		//返回完整匹配次数（可能是0），或者如果发生错误返回FALSE。
+		if($match_nums == 0 || $match_nums == FALSE ){
+			//没有匹配就原样返回
+			return array();
+		}
+		//第一个是完整匹配，第二个匹配就是去掉title标签的纯文本
+		$rows['title'] =  $matchs[1][0];
 	}
-	//第一个是完整匹配，第二个匹配就是去掉title标签的纯文本
-	$rows['title'] =  $matchs[1][0];
 	$rows['list'] = 'data:' . 'image/png' . ';base64,' . chunk_split(base64_encode($content));
-	// echo $content;
 	$rows['code'] = 200;
 	exit(json_encode($rows));
 	exit();

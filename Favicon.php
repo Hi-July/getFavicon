@@ -116,7 +116,6 @@ class Favicon
         if (!$ret) {
             throw new \InvalidArgumentException(__CLASS__ . ': Invalided url', E_WARNING);
         }
-		
 
         /**
          * 开始获取图标过程
@@ -124,7 +123,6 @@ class Favicon
         $time_start = microtime(TRUE);
 
         $this->_log_message('Begin to get icon, ' . $url);
-
 		
         /**
          * get the favicon bin data
